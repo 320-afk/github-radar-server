@@ -77,6 +77,18 @@ class TestUserProfileEndpoints:
         )
         assert response.status_code == 422  # Pydantic validation error
 
+    def test_submit_feedback_with_extended_actions(self, client):
+        import uuid
+        device_id = f"test-{uuid.uuid4().hex[:8]}"
+        for action in ["TRIED", "DEPLOYED", "NOT_INTERESTED", "TOO_MANY", "TOO_FEW"]:
+            response = client.put(
+                f"/api/v1/user-profile/{device_id}/feedback",
+                json={"repo_id": "octocat/repo-extended", "action": action},
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert any(entry["action"] == action for entry in data["feedback_log"])
+
 
 class TestAiCuratedEndpoint:
     def test_ai_curated_fallback_without_key(self, client, monkeypatch):

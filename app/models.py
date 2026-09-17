@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -53,6 +53,20 @@ class AiCuratedResponse(BaseModel):
     model: str = "miniMax-m3"
 
 
+class FeedbackLogEntry(BaseModel):
+    """Feedback log entry."""
+    repo_id: str
+    action: str
+    timestamp: str
+
+
+class InterestVector(BaseModel):
+    """User interest vector."""
+    language_weights: Dict[str, float] = Field(default_factory=dict)
+    topic_weights: Dict[str, float] = Field(default_factory=dict)
+    feedback_counts: Dict[str, int] = Field(default_factory=dict)
+
+
 class UserProfileDto(BaseModel):
     """Device user profile stored on server."""
 
@@ -62,6 +76,8 @@ class UserProfileDto(BaseModel):
     liked_repos: List[str] = Field(default_factory=list)
     skipped_repos: List[str] = Field(default_factory=list)
     saved_repos: List[str] = Field(default_factory=list)
+    feedback_log: List[FeedbackLogEntry] = Field(default_factory=list)
+    interest_vector: InterestVector = Field(default_factory=InterestVector)
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
@@ -70,7 +86,7 @@ class FeedbackDto(BaseModel):
     """User feedback payload from Android client."""
 
     repo_id: str
-    action: str = Field(..., pattern="^(like|skip|save)$")
+    action: str = Field(..., pattern="^(like|skip|save|TRIED|DEPLOYED|NOT_INTERESTED|TOO_MANY|TOO_FEW)$")
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
 
 

@@ -48,3 +48,6 @@ class GitHubCache:
 
 # Global cache instance - shared across requests
 github_cache = GitHubCache(maxsize=500, ttl_seconds=300)
+
+# Global repository cache to track known repositories by repo_id
+repo_cache: dict[str, Any] = {}

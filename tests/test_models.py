@@ -51,7 +51,7 @@ class TestSincePeriod:
 
 class TestFeedbackDto:
     def test_valid_actions(self):
-        for action in ["like", "skip", "save"]:
+        for action in ["like", "skip", "save", "TRIED", "DEPLOYED", "NOT_INTERESTED", "TOO_MANY", "TOO_FEW"]:
             fb = FeedbackDto(repo_id="octocat/repo", action=action)
             assert fb.action == action
 

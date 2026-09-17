@@ -9,6 +9,8 @@ from typing import Dict, Optional
 
 from pydantic import BaseModel
 
+from .interest_engine import compute_interest_vector
+
 
 class ProfileRecord(BaseModel):
     """Internal profile record format for JSON serialization."""
@@ -18,6 +20,8 @@ class ProfileRecord(BaseModel):
     liked_repos: list[str] = []
     skipped_repos: list[str] = []
     saved_repos: list[str] = []
+    feedback_log: list[dict] = []
+    interest_vector: dict = {"language_weights": {}, "topic_weights": {}, "feedback_counts": {}}
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
@@ -90,6 +94,16 @@ class ProfileStore:
         elif action == "save":
             if repo_id not in profile.saved_repos:
                 profile.saved_repos.append(repo_id)
+
+        # Update feedback log
+        profile.feedback_log.append({
+            "repo_id": repo_id,
+            "action": action,
+            "timestamp": now,
+        })
+        
+        # Update interest vector
+        profile.interest_vector = compute_interest_vector(profile.feedback_log)
 
         profile.updated_at = now
         asyncio.create_task(self._save_async())

@@ -3,9 +3,10 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
-from ..models import AckDto, FeedbackDto, UserProfileDto
+from ..cache import repo_cache
+from ..models import AckDto, FeedbackDto, RepoDto, UserProfileDto
 from ..profile_store import profile_store
 
 logger = logging.getLogger("uvicorn")
@@ -55,4 +56,53 @@ async def reset_profile(device_id: str) -> UserProfileDto:
     record.liked_repos = []
     record.skipped_repos = []
     record.saved_repos = []
+    record.feedback_log = []
+    record.interest_vector = {"language_weights": {}, "topic_weights": {}, "feedback_counts": {}}
     return UserProfileDto(**record.model_dump())
+
+
+@router.get("/{device_id}/similar/{repo_id:path}", response_model=List[RepoDto])
+async def get_similar_repos(
+    device_id: str,
+    repo_id: str,
+    limit: int = Query(5, ge=1, le=50),
+) -> List[RepoDto]:
+    """
+    Get similar repositories based on a given repository and user profile.
+    """
+    logger.info(f"Finding similar repos for: {repo_id}, device: {device_id}")
+    
+    target_repo = repo_cache.get(repo_id)
+    if not target_repo:
+        raise HTTPException(status_code=404, detail="Target repository not found in cache")
+        
+    target_topics = set(target_repo.topics)
+    
+    record = profile_store.get_or_create(device_id)
+    interest_vector = record.interest_vector
+    topic_weights = interest_vector.get("topic_weights", {})
+    language_weights = interest_vector.get("language_weights", {})
+    
+    similarities = []
+    for cached_repo_id, repo in repo_cache.items():
+        if cached_repo_id == repo_id:
+            continue
+            
+        repo_topics = set(repo.topics)
+        overlap = target_topics.intersection(repo_topics)
+        
+        # Base similarity from topic overlap
+        similarity = len(overlap)
+        
+        # Boost from user topic interests
+        for topic in repo_topics:
+            similarity += topic_weights.get(topic, 0.0)
+            
+        # Boost from user language interests
+        if repo.language:
+            similarity += language_weights.get(repo.language, 0.0)
+            
+        similarities.append((similarity, repo))
+        
+    similarities.sort(key=lambda x: x[0], reverse=True)
+    return [repo for _, repo in similarities[:limit]]
