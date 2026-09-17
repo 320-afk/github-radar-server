@@ -53,6 +53,35 @@ class AiCuratedResponse(BaseModel):
     model: str = "miniMax-m3"
 
 
+class AiCurationResultDto(BaseModel):
+    """AI 精选结果 DTO - 包含中文摘要和推荐理由。"""
+
+    repo_url: str = Field(..., description="仓库 URL")
+    summary_zh: str = Field(..., description="中文摘要")
+    recommended_reasons: List[str] = Field(default_factory=list, description="推荐理由列表")
+    risks: List[str] = Field(default_factory=list, description="风险提示列表")
+    compatibility_score: float = Field(..., ge=0, le=100, description="兼容性评分 0-100")
+    tech_stack: List[str] = Field(default_factory=list, description="识别的技术栈")
+    analyzed_at: str = Field(..., description="分析时间 ISO 格式")
+
+
+class AiDetailRequest(BaseModel):
+    """AI 详细分析请求。"""
+
+    repo_url: str
+    readme_content: Optional[str] = None
+    dependencies: Optional[dict[str, str]] = None
+    has_dockerfile: bool = False
+
+
+class AiBatchAnalyzeResponse(BaseModel):
+    """批量 AI 分析响应。"""
+
+    results: List[AiCurationResultDto]
+    model: str = "MiniMax-Text-01"
+    analyzed_count: int
+
+
 class UserProfileDto(BaseModel):
     """Device user profile stored on server."""
 
